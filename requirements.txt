@@ -1,0 +1,17 @@
+# Core numerical stack
+numpy>=1.24
+scipy>=1.11
+
+# Visualization
+matplotlib>=3.7
+
+# Data I/O
+pandas>=2.0
+scikit-rf>=0.29      # Touchstone (.s1p / .s2p) support
+
+# Testing
+pytest>=7.4
+pytest-cov>=4.1
+
+# Linting / formatting
+ruff>=0.1
