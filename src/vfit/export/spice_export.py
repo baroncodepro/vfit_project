@@ -82,9 +82,14 @@ def export_spice_foster(
 
     elem_counter = {"R": 0, "L": 0, "C": 0}
 
+    # Foster-I is a SERIES chain: port_pos → n0 → n1 → ... → port_neg
+    # Each branch (parallel RLC / L / R) occupies one link in the chain.
+    n_branches = len(network.branches)
+    nodes = [port_pos] + [f"n{k}" for k in range(n_branches - 1)] + [port_neg]
+
     for idx, branch in enumerate(network.branches):
-        node_a = port_pos
-        node_b = port_neg
+        node_a = nodes[idx]
+        node_b = nodes[idx + 1]
         _write_branch(lines, branch, idx, node_a, node_b, elem_counter)
 
     lines.append(f".ENDS {subckt_name}")
