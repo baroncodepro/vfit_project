@@ -139,6 +139,52 @@ class RationalModel:
         """Final absolute RMS fitting error (last iteration)."""
         return self.rms_error_history[-1] if self.rms_error_history else float("nan")
 
+    def to_zpk(self):
+        """
+        Convert to zeros-poles-gain (ZPK) form as a
+        ``scipy.signal.ZerosPolesGain`` object.
+
+        The gain ``K`` is defined so that::
+
+            H(s) = K · ∏(s − zᵢ) / ∏(s − pᵢ)
+
+        For a strictly-proper or bi-proper system this matches the high-
+        frequency gain.  The e-term (coefficient of s) is folded into the
+        numerator by appending a zero at the origin if ``e ≠ 0``.
+
+        Returns
+        -------
+        scipy.signal.ZerosPolesGain
+
+        Examples
+        --------
+        >>> zpk = model.to_zpk()
+        >>> print(zpk.poles, zpk.zeros, zpk.gain)
+
+        Notes
+        -----
+        Requires ``scipy``.
+        """
+        from scipy.signal import ZerosPolesGain
+
+        z = self.zeros          # already computed from poles/residues/d/e
+        p = self.poles
+
+        # Gain: evaluate H at a purely real s well away from all poles/zeros.
+        # Using the geometric-mean pole magnitude avoids floating-point
+        # cancellation that occurs at very large s (e.g. s=1e15).
+        pole_mag = np.abs(p).mean() if len(p) else 1.0
+        s_ref    = max(pole_mag * 10.0, 1.0) + 0j   # real, positive, away from poles
+
+        H_ref  = (self.e * s_ref + self.d
+                  + np.sum(self.residues / (s_ref - p)))
+        num_ref = np.prod(s_ref - z) if len(z) else 1.0
+        den_ref = np.prod(s_ref - p) if len(p) else 1.0
+
+        K = float(np.real(H_ref * den_ref / (num_ref + 1e-300)))
+
+        return ZerosPolesGain(z, p, K)
+
     def summary(self) -> str:
         """Multi-line human-readable summary."""
         lines = [

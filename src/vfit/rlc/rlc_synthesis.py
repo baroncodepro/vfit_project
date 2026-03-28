@@ -42,13 +42,13 @@ class RLCBranch:
     """
     One branch (term) of a Foster-I parallel RLC ladder.
 
-    Topology   R [Ω]   L [H]   C [F]   notes
-    ---------  ------  ------  ------  ----------------------------------
-    RL         R,L     –       –       real pole (low-frequency branch)
-    RC         R,–     –       C       real pole (high-frequency branch)
-    RLC        R,L,C   –       –       complex conjugate pair
-    R_only     R,–     –       –       direct term / loss
-    C_only     –,–     C       –       constant (e_term)
+    Topology   R [Ω]   L [H]   C [F]   Circuit                  Notes
+    ---------  ------  ------  ------  -----------------------  ----------------------------------
+    R_only     R       –       –       R                        d direct term
+    L_only     –       L       –       sL                       e proportional term
+    C_only     –       –       C       1/(sC)                   near-DC pole
+    RC         R       –       C       R ∥ C = R/(1+sRC)        real LHP pole: R=c/α, C=1/c
+    RLC        R       L       C       R ∥ L ∥ C                complex conjugate pair
     """
 
     branch_type: Literal["RL", "RC", "RLC", "R_only", "C_only", "L_only"]
@@ -184,15 +184,14 @@ def foster_synthesis(model: RationalModel) -> FosterNetwork:
 
         if is_real_pole:
             alpha  = -p.real    # > 0 for LHP pole
-            c_real = c.real
+            c_real = abs(c.real)   # always use magnitude (negative already warned about)
 
-            if c_real >= 0:
-                L_val = _clamp_positive(abs(c_real) / (alpha ** 2), "L")
-                R_val = _clamp_positive(abs(c_real) / alpha, "R")
-                branches.append(RLCBranch(branch_type="RL", R=R_val, L=L_val, pole=p))
-            else:
-                R_val = _clamp_positive(abs(c_real) / alpha, "R")
-                C_val = _clamp_positive(1.0 / (R_val * alpha) if R_val > 1e-30 else 0.0, "C")
+            if c_real > 1e-30:
+                # Z_branch = c/(s+alpha)
+                # Y = (s+alpha)/c = s*(1/c) + alpha/c
+                # => parallel RC: R = c/alpha,  C = 1/c
+                R_val = _clamp_positive(c_real / alpha, "R")
+                C_val = _clamp_positive(1.0 / c_real, "C")
                 branches.append(RLCBranch(branch_type="RC", R=R_val, C=C_val, pole=p))
             used[i] = True
 
@@ -249,7 +248,16 @@ def _find_conjugate(
 
 
 def _branch_impedance(branch: RLCBranch, s: np.ndarray) -> np.ndarray:
-    """Compute Z(s) for a single RLC branch."""
+    """Compute Z(s) for a single RLC branch.
+
+    Topology reference (Foster-I impedance synthesis):
+
+    R_only   Z = R
+    L_only   Z = sL                         (e-term: high-freq inductance)
+    C_only   Z = 1/(sC)                     (near-DC pole)
+    RC       Z = 1/(1/R + sC) = R/(1+sRC)   (real LHP pole: p=-alpha, R=c/alpha, C=1/c)
+    RLC      Z = 1/(1/R + 1/(sL) + sC)      (complex conjugate pole pair)
+    """
     bt = branch.branch_type
 
     if bt == "R_only":
@@ -261,11 +269,6 @@ def _branch_impedance(branch: RLCBranch, s: np.ndarray) -> np.ndarray:
     if bt == "C_only":
         return 1.0 / (s * branch.C)
 
-    if bt == "RL":
-        # Parallel RL: Z = sL·R / (sL + R)
-        sL = s * branch.L
-        return sL * branch.R / (sL + branch.R)
-
     if bt == "RC":
         # Parallel RC: Z = R / (1 + s*R*C)
         return branch.R / (1.0 + s * branch.R * branch.C)
@@ -276,5 +279,11 @@ def _branch_impedance(branch: RLCBranch, s: np.ndarray) -> np.ndarray:
                       + 1.0 / (s * branch.L)
                       + s * branch.C)
         return 1.0 / admittance
+
+    # Legacy RL branch (should no longer appear in new synthesis)
+    if bt == "RL":
+        # Parallel RL: Z = sL*R/(sL+R)
+        sL = s * branch.L
+        return sL * branch.R / (sL + branch.R)
 
     raise ValueError(f"Unknown branch type: {bt}")

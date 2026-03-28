@@ -30,6 +30,8 @@ from .core.pole_zero import (
 from .rlc.rlc_synthesis   import foster_synthesis, FosterNetwork, RLCBranch
 from .export.spice_export import export_spice_foster, export_spice_behavioral
 from .utils.data_loader   import load_csv, load_ri_csv, load_touchstone, MeasurementData
+from .solvers.passivity   import check_passivity, enforce_passivity, PassivityReport, EnforcementResult
+from .solvers.auto_order  import auto_order, OrderSweepResult
 
 __all__ = [
     "VectorFitter", "VFOptions",
@@ -39,6 +41,8 @@ __all__ = [
     "foster_synthesis", "FosterNetwork", "RLCBranch",
     "export_spice_foster", "export_spice_behavioral",
     "load_csv", "load_ri_csv", "load_touchstone", "MeasurementData",
+    "check_passivity", "enforce_passivity", "PassivityReport", "EnforcementResult",
+    "auto_order", "OrderSweepResult",
 ]
 
 __version__ = "0.1.0"
