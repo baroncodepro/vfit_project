@@ -1,0 +1,10 @@
+* Testbench: inductor_foster
+* Open in LTspice and run.  Plot V(1)/I(Vin) to see Z(jw).
+.include "inductor_foster.cir"
+
+Vin  1 0 AC 1
+X1   1 0  INDUCTOR_MODEL
+
+.ac dec 100 10Meg 1000Meg
+
+.end

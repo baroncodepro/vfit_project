@@ -24,6 +24,14 @@ env/
 *.cir
 *.zip
 
+# LTspice simulation outputs
+*.raw
+*.op.raw
+*.log
+
+# Keep example CIR files (reference netlists and testbenches)
+!examples/*.cir
+
 # Test / coverage
 .pytest_cache/
 .coverage

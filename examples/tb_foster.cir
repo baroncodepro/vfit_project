@@ -1,0 +1,11 @@
+* Testbench: two_rlc_foster
+* Open THIS file in LTspice and click Run.
+* Plot V(1)/I(Vin) to see Z(jw) — magnitude and phase.
+.include "two_rlc_foster.cir"
+
+Vin  1 0 AC 1
+X1   1 0  TWO_RLC_FOSTER
+
+.ac dec 100 1Meg 10000Meg
+
+.end

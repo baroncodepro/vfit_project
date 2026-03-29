@@ -39,6 +39,8 @@ from vfit import (
     foster_synthesis,
     export_spice_foster,
     export_spice_behavioral,
+    export_spice_test_foster,
+    export_spice_test_behavioral,
     load_csv,
     load_ri_csv,
     load_touchstone,
@@ -277,6 +279,19 @@ def _show_results(freq_hz: np.ndarray, H: np.ndarray, model, label: str) -> None
                                 subckt_name=stem.upper() + "_BEH")
         print(f"  Written: {foster_path}")
         print(f"  Written: {beh_path}")
+
+        # Also export test circuits
+        test_foster_path = Path(f"{stem}_test_foster.cir")
+        test_beh_path    = Path(f"{stem}_test_behavioral.cir")
+        export_spice_test_foster(network, test_foster_path,
+                                 subckt_name=stem.upper() + "_FOSTER",
+                                 subckt_file=foster_path)
+        export_spice_test_behavioral(model, test_beh_path,
+                                     subckt_name=stem.upper() + "_BEH",
+                                     subckt_file=beh_path)
+        print(f"  Written: {test_foster_path}")
+        print(f"  Written: {test_beh_path}")
+        print("  Open the test_*.cir files in LTspice to run AC analysis and view Bode plots.")
 
     _section("Generating plots")
     _plot_pipeline(freq_hz, H, model, network, label)

@@ -1,0 +1,11 @@
+* Testbench: two_rlc_behavioral
+* Open THIS file in LTspice and click Run.
+* Plot V(out) to see Z(jw) — magnitude and phase.
+.include "two_rlc_behavioral.cir"
+
+Vin  in 0 AC 1
+X1   in out 0  TWO_RLC_LAPLACE
+
+.ac dec 100 1Meg 10000Meg
+
+.end

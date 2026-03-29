@@ -1,0 +1,10 @@
+* Testbench: inductor_behavioral
+* Open in LTspice and run.  Plot V(out) to see Z(jw) = H(s)*1V.
+.include "inductor_behavioral.cir"
+
+Vin  in 0 AC 1
+X1   in out 0  INDUCTOR_LAPLACE
+
+.ac dec 100 10Meg 1000Meg
+
+.end

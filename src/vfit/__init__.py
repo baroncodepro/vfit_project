@@ -28,7 +28,7 @@ from .core.pole_zero import (
     pole_quality_factor,
 )
 from .rlc.rlc_synthesis   import foster_synthesis, FosterNetwork, RLCBranch
-from .export.spice_export import export_spice_foster, export_spice_behavioral
+from .export.spice_export import export_spice_foster, export_spice_behavioral, export_spice_test_foster, export_spice_test_behavioral
 from .utils.data_loader   import load_csv, load_ri_csv, load_touchstone, MeasurementData
 from .solvers.passivity   import check_passivity, enforce_passivity, PassivityReport, EnforcementResult
 from .solvers.auto_order  import auto_order, OrderSweepResult
@@ -39,7 +39,7 @@ __all__ = [
     "enforce_conjugate_pairs", "stabilize_poles",
     "pole_resonant_frequency", "pole_quality_factor",
     "foster_synthesis", "FosterNetwork", "RLCBranch",
-    "export_spice_foster", "export_spice_behavioral",
+    "export_spice_foster", "export_spice_behavioral", "export_spice_test_foster", "export_spice_test_behavioral",
     "load_csv", "load_ri_csv", "load_touchstone", "MeasurementData",
     "check_passivity", "enforce_passivity", "PassivityReport", "EnforcementResult",
     "auto_order", "OrderSweepResult",
