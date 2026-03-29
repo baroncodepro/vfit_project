@@ -30,9 +30,14 @@ This example shows three scenarios:
 from __future__ import annotations
 
 import sys
+import io
 import os
 import warnings
 from pathlib import Path
+
+# Ensure Unicode output works on Windows terminals with non-UTF-8 code pages
+if hasattr(sys.stdout, "buffer") and sys.stdout.encoding.lower() not in ("utf-8", "utf-8-sig"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -40,10 +45,17 @@ import matplotlib.gridspec as gridspec
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+import re as _re
+
 from vfit import (
     VectorFitter,
     check_passivity,
     enforce_passivity,
+    foster_synthesis,
+    export_spice_foster,
+    export_spice_behavioral,
+    export_spice_test_foster,
+    export_spice_test_behavioral,
 )
 
 HERE = Path(__file__).parent
@@ -278,3 +290,43 @@ fig.savefig(HERE / "06_passivity.png", dpi=150, bbox_inches="tight")
 print("\nSaved: 06_passivity.png")
 plt.show()
 print("\nDone.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPICE export — passivity-enforced models for all 3 scenarios
+# ─────────────────────────────────────────────────────────────────────────────
+# Scenario 1: model is already passive — export as-is
+# Scenario 2: export the post-enforcement model (result2.model)
+# Scenario 3: export the post-enforcement model (result3.model)
+#
+# Verify with:
+#   python plot_ltspice_bode.py --preset passivity1
+#   python plot_ltspice_bode.py --preset passivity2
+#   python plot_ltspice_bode.py --preset passivity3
+
+print("\n── SPICE export ────────────────────────────────────")
+
+_passive_model1 = model1 if report1.is_passive else result1.model
+
+_exports = [
+    ("passivity1", _passive_model1, "PASSIVITY1", "Scenario 1 — clean (noise=0.001)"),
+    ("passivity2", result2.model,   "PASSIVITY2", "Scenario 2 — enforced (noise=0.1)"),
+    ("passivity3", result3.model,   "PASSIVITY3", "Scenario 3 — enforced (noise=1.0, n=8)"),
+]
+
+for stem, model, subckt, desc in _exports:
+    foster_net = foster_synthesis(model)
+    foster_cir = HERE / f"{stem}_foster.cir"
+    beh_cir    = HERE / f"{stem}_behavioral.cir"
+    tb_foster  = HERE / f"tb_{stem}_foster.cir"
+    tb_beh     = HERE / f"tb_{stem}_behavioral.cir"
+
+    export_spice_foster(foster_net, foster_cir, subckt_name=f"{subckt}_FOSTER")
+    export_spice_behavioral(model,  beh_cir,    subckt_name=f"{subckt}_LAPLACE")
+    export_spice_test_foster(foster_net, tb_foster,
+                             subckt_name=f"{subckt}_FOSTER", subckt_file=foster_cir)
+    export_spice_test_behavioral(model, tb_beh,
+                                 subckt_name=f"{subckt}_LAPLACE", subckt_file=beh_cir)
+    print(f"  {desc}")
+    print(f"    Foster  : {foster_cir.name}  +  {tb_foster.name}")
+    print(f"    Laplace : {beh_cir.name}  +  {tb_beh.name}")

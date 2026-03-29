@@ -41,8 +41,13 @@ Key rule of thumb
 from __future__ import annotations
 
 import sys
+import io
 import os
 import warnings
+
+# Ensure Unicode output works on Windows terminals with non-UTF-8 code pages
+if hasattr(sys.stdout, "buffer") and sys.stdout.encoding.lower() not in ("utf-8", "utf-8-sig"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -50,8 +55,20 @@ import matplotlib.gridspec as gridspec
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from vfit import VectorFitter
+import re as _re
+from pathlib import Path
+
+from vfit import (
+    VectorFitter,
+    foster_synthesis,
+    export_spice_foster,
+    export_spice_behavioral,
+    export_spice_test_foster,
+    export_spice_test_behavioral,
+)
 from vfit.core.pole_zero import pole_resonant_frequency, pole_quality_factor
+
+HERE = Path(__file__).parent
 
 
 # ── Reproducible noise ────────────────────────────────────────────────────────
@@ -401,3 +418,51 @@ print("Saved: 03_noisy_lesson3.png")
 
 plt.show()
 print("\nDone.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPICE export — best model per lesson
+# ─────────────────────────────────────────────────────────────────────────────
+# Lesson 1: n_poles=2 is the correct order (2 real LHP poles)
+# Lesson 2: uniform weight gives the best fit for the Q=5 resonator
+# Lesson 3: RHP poles -> behavioral-only (Foster synthesis requires stable poles)
+#
+# Verify with:
+#   python plot_ltspice_bode.py --preset noisy1
+#   python plot_ltspice_bode.py --preset noisy2
+#   python plot_ltspice_bode.py --preset noisy3
+
+print("\n── SPICE export ────────────────────────────────────")
+
+_exports = [
+    # (stem, model, subckt, sweep Hz range, has_stable_poles)
+    ("noisy1", models1[2],         "NOISY1", "0.01 100", True),
+    ("noisy2", models2["uniform"], "NOISY2", "0.01 10",  True),
+    ("noisy3", models3[2],         "NOISY3", "0.1  100", False),
+]
+
+for stem, model, subckt, sweep_range, stable in _exports:
+    beh_cir = HERE / f"{stem}_behavioral.cir"
+    tb_beh  = HERE / f"tb_{stem}_behavioral.cir"
+    export_spice_behavioral(model, beh_cir, subckt_name=f"{subckt}_LAPLACE")
+    export_spice_test_behavioral(model, tb_beh,
+                                 subckt_name=f"{subckt}_LAPLACE",
+                                 subckt_file=beh_cir)
+    txt = tb_beh.read_text(encoding="utf-8")
+    txt = _re.sub(r"\.ac dec \d+ \S+ \S+", f".ac dec 100 {sweep_range}", txt)
+    tb_beh.write_text(txt, encoding="utf-8")
+
+    if stable:
+        foster_net = foster_synthesis(model)
+        foster_cir = HERE / f"{stem}_foster.cir"
+        tb_foster  = HERE / f"tb_{stem}_foster.cir"
+        export_spice_foster(foster_net, foster_cir, subckt_name=f"{subckt}_FOSTER")
+        export_spice_test_foster(foster_net, tb_foster,
+                                 subckt_name=f"{subckt}_FOSTER",
+                                 subckt_file=foster_cir)
+        txt = tb_foster.read_text(encoding="utf-8")
+        txt = _re.sub(r"\.ac dec \d+ \S+ \S+", f".ac dec 100 {sweep_range}", txt)
+        tb_foster.write_text(txt, encoding="utf-8")
+        print(f"  {stem}: Foster + Behavioral  (sweep {sweep_range} Hz)")
+    else:
+        print(f"  {stem}: Behavioral only  (RHP poles, sweep {sweep_range} Hz)")
