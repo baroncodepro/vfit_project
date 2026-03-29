@@ -556,6 +556,7 @@ if __name__ == "__main__":
             *[f"  {k:12s}  {v.title[:60]}" for k, v in PRESETS.items()],
             "",
             "Examples:",
+            "  python plot_ltspice_bode.py --all                   # plot every available preset",
             "  python plot_ltspice_bode.py --preset inductor",
             "  python plot_ltspice_bode.py --preset filter",
             "  python plot_ltspice_bode.py --foster tb.raw --behavioral tb_beh.raw",
@@ -601,33 +602,84 @@ if __name__ == "__main__":
         "--max-points", type=int, default=2000,
         help="Max points per trace (downsamples large .raw files).",
     )
+    parser.add_argument(
+        "--all", action="store_true",
+        help="Run all presets and generate one PNG per study.",
+    )
     args = parser.parse_args()
 
-    # ── Resolve paths: preset → CLI overrides ──────────────────────────────
-    preset = PRESETS.get(args.preset) if args.preset else PRESETS["two_rlc"]
 
-    foster_path     = args.foster     or (Path(preset.foster)     if preset.foster     else None)
-    behavioral_path = args.behavioral or (Path(preset.behavioral) if preset.behavioral else None)
-    csv_path        = args.csv        or (Path(preset.csv)        if preset.csv        else None)
-    out_png         = args.out        or Path(preset.out)
-    title           = args.title      or preset.title
+    def _run_preset(name: str, p: _Preset) -> None:
+        """Plot one preset; skip silently if no .raw files exist."""
+        foster_p = Path(p.foster)     if p.foster     else None
+        beh_p    = Path(p.behavioral) if p.behavioral else None
+        csv_p    = Path(p.csv)        if p.csv        else None
 
-    # Determine y-axis label based on CSV content (filter → dB, others → Ω)
-    if args.ylabel:
-        ylabel = args.ylabel
-    elif csv_path and "s21" in str(csv_path).lower():
-        ylabel = "|H(jω)|  (dB)"
+        # Skip preset entirely when neither raw file exists
+        has_foster = foster_p is not None and foster_p.exists()
+        has_beh    = beh_p    is not None and beh_p.exists()
+        if not has_foster and not has_beh:
+            print(f"[{name}] No .raw files found — skipping "
+                  f"(run LTspice on the testbench first)")
+            return
+
+        out_p  = Path(p.out)
+        ylabel = "|H(jω)|  (dB)" if csv_p and "s21" in str(csv_p).lower() \
+                 else "|Z(jω)|  (dB Ω)"
+
+        print(f"\n{'='*60}")
+        print(f"Preset: {name}")
+        plot_bode_comparison(
+            out_png         = out_p,
+            foster_path     = foster_p,
+            behavioral_path = beh_p,
+            csv_path        = csv_p,
+            title           = p.title,
+            max_points      = args.max_points,
+            ylabel          = ylabel,
+        )
+
+
+    if args.all:
+        # ── Run every preset ────────────────────────────────────────────────
+        print(f"Running all {len(PRESETS)} presets ...\n")
+        skipped = 0
+        for name, p in PRESETS.items():
+            foster_p = Path(p.foster)     if p.foster     else None
+            beh_p    = Path(p.behavioral) if p.behavioral else None
+            if (foster_p is None or not foster_p.exists()) and \
+               (beh_p    is None or not beh_p.exists()):
+                skipped += 1
+                print(f"[{name:12s}] skipped — no .raw files")
+            else:
+                _run_preset(name, p)
+        print(f"\nDone. ({len(PRESETS) - skipped} plotted, {skipped} skipped)")
+
     else:
-        ylabel = "|Z(jω)|  (dB Ω)"
+        # ── Single preset / custom paths ────────────────────────────────────
+        preset = PRESETS.get(args.preset) if args.preset else PRESETS["two_rlc"]
 
-    plot_bode_comparison(
-        out_png         = out_png,
-        foster_path     = foster_path,
-        behavioral_path = behavioral_path,
-        csv_path        = csv_path,
-        foster_var      = args.foster_var,
-        behavioral_var  = args.behavioral_var,
-        title           = title,
-        max_points      = args.max_points,
-        ylabel          = ylabel,
-    )
+        foster_path     = args.foster     or (Path(preset.foster)     if preset.foster     else None)
+        behavioral_path = args.behavioral or (Path(preset.behavioral) if preset.behavioral else None)
+        csv_path        = args.csv        or (Path(preset.csv)        if preset.csv        else None)
+        out_png         = args.out        or Path(preset.out)
+        title           = args.title      or preset.title
+
+        if args.ylabel:
+            ylabel = args.ylabel
+        elif csv_path and "s21" in str(csv_path).lower():
+            ylabel = "|H(jω)|  (dB)"
+        else:
+            ylabel = "|Z(jω)|  (dB Ω)"
+
+        plot_bode_comparison(
+            out_png         = out_png,
+            foster_path     = foster_path,
+            behavioral_path = behavioral_path,
+            csv_path        = csv_path,
+            foster_var      = args.foster_var,
+            behavioral_var  = args.behavioral_var,
+            title           = title,
+            max_points      = args.max_points,
+            ylabel          = ylabel,
+        )
