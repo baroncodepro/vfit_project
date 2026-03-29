@@ -46,8 +46,14 @@ Reference: Gustavsen & Semlyen, IEEE Trans. Power Delivery, 1999.
 from __future__ import annotations
 
 import sys
+import io
 import os
 import warnings
+from pathlib import Path
+
+# Ensure Unicode output works on Windows terminals with non-UTF-8 code pages
+if hasattr(sys.stdout, "buffer") and sys.stdout.encoding.lower() not in ("utf-8", "utf-8-sig"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -55,9 +61,18 @@ import matplotlib.gridspec as gridspec
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from vfit import VectorFitter
+from vfit import (
+    VectorFitter,
+    foster_synthesis,
+    export_spice_foster,
+    export_spice_behavioral,
+    export_spice_test_foster,
+    export_spice_test_behavioral,
+)
 from vfit.core.pole_zero import pole_resonant_frequency, pole_quality_factor
 from vfit.visualization import bode_plot, pole_zero_map, convergence_plot
+
+HERE = Path(os.path.dirname(__file__))
 
 
 # ── Helper: print a labelled section header ───────────────────────────────────
@@ -330,3 +345,57 @@ print("Saved: 02_sdomain_convergence.png")
 
 plt.show()
 print("\nDone.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPICE export — enables LTspice verification via plot_ltspice_bode.py
+# ─────────────────────────────────────────────────────────────────────────────
+# Note: these are normalised transfer functions (frequency axis in Hz, not MHz).
+# The LAPLACE E-source handles any frequency range, so LTspice sweeps fine.
+# Testbench sweep ranges are set to cover the fitted frequency axes.
+#
+# Verify with:
+#   python plot_ltspice_bode.py --preset sdomain1
+#   python plot_ltspice_bode.py --preset sdomain2
+#   python plot_ltspice_bode.py --preset sdomain3
+
+print("\n── SPICE export ────────────────────────────────────")
+
+import re as _re
+
+#  (stable_poles, model, subckt_prefix, sweep Hz range, description)
+_cases = [
+    (True,  model1,  "SDOMAIN1",  "0.01 100",   "Case 1:  H=s/((s+1)(s+3))"),
+    (True,  model2,  "SDOMAIN2",  "0.01 10",    "Case 2:  H=2s/(s^2+0.4s+4)"),
+    (False, model3b, "SDOMAIN3",  "0.1  100",   "Case 3:  H=s/(s^2-3s+2) RHP (behavioral only)"),
+]
+
+for stable, model, subckt, sweep_range, desc in _cases:
+    beh_cir = HERE / f"{subckt.lower()}_behavioral.cir"
+    tb_beh  = HERE / f"tb_{subckt.lower()}_behavioral.cir"
+
+    export_spice_behavioral(model, beh_cir, subckt_name=f"{subckt}_LAPLACE")
+    export_spice_test_behavioral(model, tb_beh,
+                                 subckt_name=f"{subckt}_LAPLACE",
+                                 subckt_file=beh_cir)
+    txt = tb_beh.read_text(encoding="utf-8")
+    txt = _re.sub(r"\.ac dec \d+ \S+ \S+", f".ac dec 100 {sweep_range}", txt)
+    tb_beh.write_text(txt, encoding="utf-8")
+
+    if stable:
+        foster_net = foster_synthesis(model)
+        foster_cir = HERE / f"{subckt.lower()}_foster.cir"
+        tb_foster  = HERE / f"tb_{subckt.lower()}_foster.cir"
+        export_spice_foster(foster_net, foster_cir, subckt_name=f"{subckt}_FOSTER")
+        export_spice_test_foster(foster_net, tb_foster,
+                                 subckt_name=f"{subckt}_FOSTER",
+                                 subckt_file=foster_cir)
+        txt = tb_foster.read_text(encoding="utf-8")
+        txt = _re.sub(r"\.ac dec \d+ \S+ \S+", f".ac dec 100 {sweep_range}", txt)
+        tb_foster.write_text(txt, encoding="utf-8")
+        print(f"  {desc}")
+        print(f"    Foster  : {foster_cir.name}  +  {tb_foster.name}")
+    else:
+        print(f"  {desc}")
+        print(f"    (Foster skipped: RHP poles cannot be synthesised as passive RLC)")
+    print(f"    Laplace : {beh_cir.name}  +  {tb_beh.name}")
