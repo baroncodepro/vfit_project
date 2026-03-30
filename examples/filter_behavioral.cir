@@ -6,6 +6,7 @@
 * V(out,0) = H(s) * V(in,0)
 * H(s) = NUM(s) / DEN(s)
 E1 out 0 LAPLACE {V(in,0)} = {(6.835597e+55+9.620362e+46*s+-6.633748e+37*s**2+-4.656030e+28*s**3+1.407949e+18*s**4+1.073636e+08*s**5+-1.871903e-02*s**6)/(1.398549e+56+6.107600e+46*s+-2.378381e+38*s**2+-2.966407e+29*s**3+-8.515849e+19*s**4+4.343534e+09*s**5+1.000000e+00*s**6)}
+Rbleed out 0 1G   ; DC path — prevents floating node warning
 
 .ENDS FILTER_LAPLACE
 
