@@ -63,6 +63,8 @@ from vfit import (
     foster_synthesis,
     export_spice_foster,
     export_spice_behavioral,
+    export_spice_test_foster,
+    export_spice_test_behavioral,
     load_ri_csv,
     MeasurementData,
 )
@@ -301,10 +303,15 @@ print(f"  Foster network vs measured RMS = {rms_synth_vs_data:.4e} Ω")
 
 _section("Step 7: SPICE export")
 
-foster_path = HERE / "two_rlc_foster.cir"
-beh_path    = HERE / "two_rlc_behavioral.cir"
-export_spice_foster(   network, foster_path, subckt_name="TWO_RLC_FOSTER")
-export_spice_behavioral(model,  beh_path,    subckt_name="TWO_RLC_LAPLACE")
+foster_path    = HERE / "two_rlc_foster.cir"
+beh_path       = HERE / "two_rlc_behavioral.cir"
+tb_foster_path = HERE / "tb_two_rlc_foster.cir"
+tb_beh_path    = HERE / "tb_two_rlc_behavioral.cir"
+
+export_spice_foster(        network, foster_path, subckt_name="TWO_RLC_FOSTER")
+export_spice_behavioral(    model,   beh_path,    subckt_name="TWO_RLC_LAPLACE")
+export_spice_test_foster(   network, tb_foster_path,    subckt_name="TWO_RLC_FOSTER",    subckt_file=foster_path)
+export_spice_test_behavioral(model,  tb_beh_path,       subckt_name="TWO_RLC_LAPLACE",   subckt_file=beh_path)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -492,3 +499,5 @@ print("\nDone.")
 print(f"\nSPICE files written:")
 print(f"  {foster_path}")
 print(f"  {beh_path}")
+print(f"  {tb_foster_path}  ← open this in LTspice to run AC simulation")
+print(f"  {tb_beh_path}     ← open this in LTspice to run AC simulation")

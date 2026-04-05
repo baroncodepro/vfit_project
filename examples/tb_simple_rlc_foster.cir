@@ -10,10 +10,7 @@ Vin  1 0 AC 1
 * Instantiate the subcircuit (port_pos=1, port_neg=0)
 X1 1 0 SIMPLE_RLC_FOSTER
 
-* AC sweep: 100 points per decade from 1 MHz to 10 GHz
-.ac dec 100 1Meg 10000Meg
-
-* Plot V(1)/I(Vin) in LTspice to see Z(jw) magnitude and phase
-.probe V(1)
+* AC sweep: 100 points per decade from 1Meg to 10G
+.ac dec 100 1Meg 10G
 
 .end

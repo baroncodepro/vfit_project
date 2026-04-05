@@ -55,7 +55,6 @@ import matplotlib.gridspec as gridspec
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-import re as _re
 from pathlib import Path
 
 from vfit import (
@@ -416,9 +415,6 @@ fig3.tight_layout()
 fig3.savefig("03_noisy_lesson3.png", dpi=150)
 print("Saved: 03_noisy_lesson3.png")
 
-plt.show()
-print("\nDone.")
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SPICE export — best model per lesson
@@ -435,22 +431,21 @@ print("\nDone.")
 print("\n── SPICE export ────────────────────────────────────")
 
 _exports = [
-    # (stem, model, subckt, sweep Hz range, has_stable_poles)
-    ("noisy1", models1[2],         "NOISY1", "0.01 100", True),
-    ("noisy2", models2["uniform"], "NOISY2", "0.01 10",  True),
-    ("noisy3", models3[2],         "NOISY3", "0.1  100", False),
+    # (stem, model, subckt, freq_start_hz, freq_stop_hz, has_stable_poles)
+    ("noisy1", models1[2],         "NOISY1", 0.01, 100.0, True),
+    ("noisy2", models2["uniform"], "NOISY2", 0.01,  10.0, True),
+    ("noisy3", models3[2],         "NOISY3", 0.1,  100.0, False),
 ]
 
-for stem, model, subckt, sweep_range, stable in _exports:
+for stem, model, subckt, f_start, f_stop, stable in _exports:
     beh_cir = HERE / f"{stem}_behavioral.cir"
     tb_beh  = HERE / f"tb_{stem}_behavioral.cir"
     export_spice_behavioral(model, beh_cir, subckt_name=f"{subckt}_LAPLACE")
     export_spice_test_behavioral(model, tb_beh,
                                  subckt_name=f"{subckt}_LAPLACE",
-                                 subckt_file=beh_cir)
-    txt = tb_beh.read_text(encoding="utf-8")
-    txt = _re.sub(r"\.ac dec \d+ \S+ \S+", f".ac dec 100 {sweep_range}", txt)
-    tb_beh.write_text(txt, encoding="utf-8")
+                                 subckt_file=beh_cir,
+                                 freq_start_hz=f_start,
+                                 freq_stop_hz=f_stop)
 
     if stable:
         foster_net = foster_synthesis(model)
@@ -459,10 +454,12 @@ for stem, model, subckt, sweep_range, stable in _exports:
         export_spice_foster(foster_net, foster_cir, subckt_name=f"{subckt}_FOSTER")
         export_spice_test_foster(foster_net, tb_foster,
                                  subckt_name=f"{subckt}_FOSTER",
-                                 subckt_file=foster_cir)
-        txt = tb_foster.read_text(encoding="utf-8")
-        txt = _re.sub(r"\.ac dec \d+ \S+ \S+", f".ac dec 100 {sweep_range}", txt)
-        tb_foster.write_text(txt, encoding="utf-8")
-        print(f"  {stem}: Foster + Behavioral  (sweep {sweep_range} Hz)")
+                                 subckt_file=foster_cir,
+                                 freq_start_hz=f_start,
+                                 freq_stop_hz=f_stop)
+        print(f"  {stem}: Foster + Behavioral  (sweep {f_start}–{f_stop} Hz)")
     else:
-        print(f"  {stem}: Behavioral only  (RHP poles, sweep {sweep_range} Hz)")
+        print(f"  {stem}: Behavioral only  (RHP poles, sweep {f_start}–{f_stop} Hz)")
+
+plt.show()
+print("\nDone.")

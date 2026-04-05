@@ -343,10 +343,6 @@ fig3.savefig("02_sdomain_convergence.png", dpi=150)
 print("Saved: 02_sdomain_convergence.png")
 
 
-plt.show()
-print("\nDone.")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # SPICE export — enables LTspice verification via plot_ltspice_bode.py
 # ─────────────────────────────────────────────────────────────────────────────
@@ -361,26 +357,23 @@ print("\nDone.")
 
 print("\n── SPICE export ────────────────────────────────────")
 
-import re as _re
-
-#  (stable_poles, model, subckt_prefix, sweep Hz range, description)
+#  (stable_poles, model, subckt_prefix, freq_start_hz, freq_stop_hz, description)
 _cases = [
-    (True,  model1,  "SDOMAIN1",  "0.01 100",   "Case 1:  H=s/((s+1)(s+3))"),
-    (True,  model2,  "SDOMAIN2",  "0.01 10",    "Case 2:  H=2s/(s^2+0.4s+4)"),
-    (False, model3b, "SDOMAIN3",  "0.1  100",   "Case 3:  H=s/(s^2-3s+2) RHP (behavioral only)"),
+    (True,  model1,  "SDOMAIN1", 0.01, 100.0, "Case 1:  H=s/((s+1)(s+3))"),
+    (True,  model2,  "SDOMAIN2", 0.01,  10.0, "Case 2:  H=2s/(s^2+0.4s+4)"),
+    (False, model3b, "SDOMAIN3", 0.1,  100.0, "Case 3:  H=s/(s^2-3s+2) RHP (behavioral only)"),
 ]
 
-for stable, model, subckt, sweep_range, desc in _cases:
+for stable, model, subckt, f_start, f_stop, desc in _cases:
     beh_cir = HERE / f"{subckt.lower()}_behavioral.cir"
     tb_beh  = HERE / f"tb_{subckt.lower()}_behavioral.cir"
 
     export_spice_behavioral(model, beh_cir, subckt_name=f"{subckt}_LAPLACE")
     export_spice_test_behavioral(model, tb_beh,
                                  subckt_name=f"{subckt}_LAPLACE",
-                                 subckt_file=beh_cir)
-    txt = tb_beh.read_text(encoding="utf-8")
-    txt = _re.sub(r"\.ac dec \d+ \S+ \S+", f".ac dec 100 {sweep_range}", txt)
-    tb_beh.write_text(txt, encoding="utf-8")
+                                 subckt_file=beh_cir,
+                                 freq_start_hz=f_start,
+                                 freq_stop_hz=f_stop)
 
     if stable:
         foster_net = foster_synthesis(model)
@@ -389,13 +382,15 @@ for stable, model, subckt, sweep_range, desc in _cases:
         export_spice_foster(foster_net, foster_cir, subckt_name=f"{subckt}_FOSTER")
         export_spice_test_foster(foster_net, tb_foster,
                                  subckt_name=f"{subckt}_FOSTER",
-                                 subckt_file=foster_cir)
-        txt = tb_foster.read_text(encoding="utf-8")
-        txt = _re.sub(r"\.ac dec \d+ \S+ \S+", f".ac dec 100 {sweep_range}", txt)
-        tb_foster.write_text(txt, encoding="utf-8")
+                                 subckt_file=foster_cir,
+                                 freq_start_hz=f_start,
+                                 freq_stop_hz=f_stop)
         print(f"  {desc}")
         print(f"    Foster  : {foster_cir.name}  +  {tb_foster.name}")
     else:
         print(f"  {desc}")
         print(f"    (Foster skipped: RHP poles cannot be synthesised as passive RLC)")
     print(f"    Laplace : {beh_cir.name}  +  {tb_beh.name}")
+
+plt.show()
+print("\nDone.")

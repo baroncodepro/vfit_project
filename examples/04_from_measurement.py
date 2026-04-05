@@ -67,6 +67,8 @@ from vfit import (
     foster_synthesis,
     export_spice_foster,
     export_spice_behavioral,
+    export_spice_test_foster,
+    export_spice_test_behavioral,
     load_ri_csv,
     load_csv,
     MeasurementData,
@@ -192,10 +194,20 @@ print(f"\n  Synthesis round-trip RMS = {rms_synth:.4e}  (model vs network)")
 
 # ── Step 5: SPICE export ──────────────────────────────────────────────────────
 _section("SPICE export")
-foster_path = HERE / "inductor_foster.cir"
-beh_path    = HERE / "inductor_behavioral.cir"
-export_spice_foster(network_A, foster_path, subckt_name="INDUCTOR_MODEL")
-export_spice_behavioral(model_A, beh_path,  subckt_name="INDUCTOR_LAPLACE")
+foster_path    = HERE / "inductor_foster.cir"
+beh_path       = HERE / "inductor_behavioral.cir"
+tb_foster_path = HERE / "tb_inductor_foster.cir"
+tb_beh_path    = HERE / "tb_inductor_behavioral.cir"
+export_spice_foster(         network_A, foster_path,    subckt_name="INDUCTOR_MODEL")
+export_spice_behavioral(     model_A,   beh_path,       subckt_name="INDUCTOR_LAPLACE")
+export_spice_test_foster(    network_A, tb_foster_path, subckt_name="INDUCTOR_MODEL",
+                             subckt_file=foster_path,
+                             freq_start_hz=data_A.freq_hz.min(),
+                             freq_stop_hz=data_A.freq_hz.max())
+export_spice_test_behavioral(model_A,   tb_beh_path,    subckt_name="INDUCTOR_LAPLACE",
+                             subckt_file=beh_path,
+                             freq_start_hz=data_A.freq_hz.min(),
+                             freq_stop_hz=data_A.freq_hz.max())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -260,8 +272,20 @@ print(f"\n  Synthesis round-trip RMS = {rms_synth_B:.4e}")
 
 # ── Step 5: SPICE export ──────────────────────────────────────────────────────
 _section("SPICE export")
-export_spice_foster(network_B, HERE / "filter_foster.cir",    subckt_name="FILTER_FOSTER")
-export_spice_behavioral(model_B, HERE / "filter_behavioral.cir", subckt_name="FILTER_LAPLACE")
+filter_foster_path    = HERE / "filter_foster.cir"
+filter_beh_path       = HERE / "filter_behavioral.cir"
+tb_filter_foster_path = HERE / "tb_filter_foster.cir"
+tb_filter_beh_path    = HERE / "tb_filter_behavioral.cir"
+export_spice_foster(         network_B, filter_foster_path,    subckt_name="FILTER_FOSTER")
+export_spice_behavioral(     model_B,   filter_beh_path,       subckt_name="FILTER_LAPLACE")
+export_spice_test_foster(    network_B, tb_filter_foster_path, subckt_name="FILTER_FOSTER",
+                             subckt_file=filter_foster_path,
+                             freq_start_hz=data_B.freq_hz.min(),
+                             freq_stop_hz=data_B.freq_hz.max())
+export_spice_test_behavioral(model_B,   tb_filter_beh_path,    subckt_name="FILTER_LAPLACE",
+                             subckt_file=filter_beh_path,
+                             freq_start_hz=data_B.freq_hz.min(),
+                             freq_stop_hz=data_B.freq_hz.max())
 
 
 # ─────────────────────────────────────────────────────────────────────────────

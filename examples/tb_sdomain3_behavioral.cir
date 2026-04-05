@@ -13,7 +13,4 @@ X1 in out 0 SDOMAIN3_LAPLACE
 * AC sweep: 100 points per decade from 1 MHz to 10 GHz
 .ac dec 100 0.1  100
 
-* Plot V(out) to see H(s) = Z(s)
-.probe V(out)
-
 .end

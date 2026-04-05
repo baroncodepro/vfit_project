@@ -288,10 +288,6 @@ ax_bode3.tick_params(labelsize=8)
 fig.tight_layout()
 fig.savefig(HERE / "06_passivity.png", dpi=150, bbox_inches="tight")
 print("\nSaved: 06_passivity.png")
-plt.show()
-print("\nDone.")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # SPICE export — passivity-enforced models for all 3 scenarios
 # ─────────────────────────────────────────────────────────────────────────────
@@ -330,3 +326,6 @@ for stem, model, subckt, desc in _exports:
     print(f"  {desc}")
     print(f"    Foster  : {foster_cir.name}  +  {tb_foster.name}")
     print(f"    Laplace : {beh_cir.name}  +  {tb_beh.name}")
+
+plt.show()
+print("\nDone.")

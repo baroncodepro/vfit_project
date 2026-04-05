@@ -13,7 +13,4 @@ X1 1 0 SDOMAIN2_FOSTER
 * AC sweep: 100 points per decade from 1 MHz to 10 GHz
 .ac dec 100 0.01 10
 
-* Plot V(1)/I(Vin) in LTspice to see Z(jw) magnitude and phase
-.probe V(1)
-
 .end
