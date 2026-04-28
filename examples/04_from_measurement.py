@@ -57,6 +57,8 @@ import warnings
 from pathlib import Path
 
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # ── Path setup (not needed once you pip install -e .) ─────────────────────────
@@ -88,19 +90,19 @@ from vfit.visualization import bode_plot, pole_zero_map, convergence_plot
 HERE = Path(__file__).parent
 
 def _header(title: str) -> None:
-    bar = "═" * 68
+    bar = "=" * 68
     print(f"\n{bar}\n  {title}\n{bar}")
 
 def _section(title: str) -> None:
-    print(f"\n  ── {title} {'─'*(60-len(title))}")
+    print(f"\n  -- {title} {'-'*(60-len(title))}")
 
 
 def print_pole_table(model) -> None:
     """Print a formatted pole characterisation table."""
     poles_sorted = sort_by_frequency(model.poles)
     print(f"  {'#':>3}  {'Re(p) [rad/s]':>18}  {'Im(p) [rad/s]':>18}  "
-          f"{'f₀ [MHz]':>10}  {'Q':>8}  {'type':>8}")
-    print(f"  {'─'*3}  {'─'*18}  {'─'*18}  {'─'*10}  {'─'*8}  {'─'*8}")
+          f"{'f0 [MHz]':>10}  {'Q':>8}  {'type':>8}")
+    print(f"  {'-'*3}  {'-'*18}  {'-'*18}  {'-'*10}  {'-'*8}  {'-'*8}")
     for i, p in enumerate(poles_sorted):
         if p.imag < 0:
             continue   # skip conjugate — already shown
@@ -114,12 +116,12 @@ def print_pole_table(model) -> None:
 
 def print_rlc_table(network) -> None:
     """Print synthesised RLC element values."""
-    print(f"  {'#':>3}  {'type':>7}  {'R [Ω]':>12}  {'L [H]':>12}  {'C [F]':>12}")
-    print(f"  {'─'*3}  {'─'*7}  {'─'*12}  {'─'*12}  {'─'*12}")
+    print(f"  {'#':>3}  {'type':>7}  {'R [Ohm]':>12}  {'L [H]':>12}  {'C [F]':>12}")
+    print(f"  {'-'*3}  {'-'*7}  {'-'*12}  {'-'*12}  {'-'*12}")
     for i, b in enumerate(network.branches):
-        R = f"{b.R:.4e}" if b.R is not None else "—"
-        L = f"{b.L:.4e}" if b.L is not None else "—"
-        C = f"{b.C:.4e}" if b.C is not None else "—"
+        R = f"{b.R:.4e}" if b.R is not None else "-"
+        L = f"{b.L:.4e}" if b.L is not None else "-"
+        C = f"{b.C:.4e}" if b.C is not None else "-"
         print(f"  {i:>3}  {b.branch_type:>7}  {R:>12}  {L:>12}  {C:>12}")
 
 
@@ -127,7 +129,7 @@ def print_rlc_table(network) -> None:
 # Dataset A — Lossy inductor impedance
 # ─────────────────────────────────────────────────────────────────────────────
 
-_header("Dataset A — Lossy inductor impedance  (Re/Im CSV, MHz)")
+_header("Dataset A - Lossy inductor impedance  (Re/Im CSV, MHz)")
 
 # ── Step 1: Load ──────────────────────────────────────────────────────────────
 # ┌─────────────────────────────────────────────────────────────────────────────
@@ -140,7 +142,7 @@ data_A = load_ri_csv(
     re_col    = "Re[Z_Ohm]",
     im_col    = "Im[Z_Ohm]",
     freq_unit = "MHz",          # explicit — avoids auto-detection ambiguity
-    label     = "Inductor Z(jω)",
+    label     = "Inductor Z(jw)",
 )
 print(data_A.summary())
 
@@ -171,8 +173,8 @@ _section("Pole characterisation")
 print_pole_table(model_A)
 
 print()
-print(f"  d (direct term, ≈ R_s)  = {model_A.d:.4e} Ω")
-print(f"  e (s-coeff,    ≈ L_s)   = {model_A.e:.4e} H")
+print(f"  d (direct term, ~R_s)  = {model_A.d:.4e} Ohm")
+print(f"  e (s-coeff,    ~L_s)   = {model_A.e:.4e} H")
 print()
 print("  Interpretation:")
 print("  The e-term gives the high-frequency inductance directly.")
@@ -214,7 +216,7 @@ export_spice_test_behavioral(model_A,   tb_beh_path,    subckt_name="INDUCTOR_LA
 # Dataset B — 4th-order filter S21
 # ─────────────────────────────────────────────────────────────────────────────
 
-_header("Dataset B — 4th-order Butterworth S21  (dB+deg CSV, GHz)")
+_header("Dataset B - 4th-order Butterworth S21  (dB+deg CSV, GHz)")
 
 # ── Step 1: Load ──────────────────────────────────────────────────────────────
 # ┌─────────────────────────────────────────────────────────────────────────────
@@ -249,7 +251,7 @@ rms_rel_B = float(np.sqrt(np.mean(
 )))
 print(f"  n_poles     = {model_B.n_poles}")
 print(f"  RMS (abs)   = {model_B.rms_error:.4e}")
-print(f"  RMS (rel)   = {rms_rel_B:.4e}  (relative to |H|+ε)")
+print(f"  RMS (rel)   = {rms_rel_B:.4e}  (relative to |H|+eps)")
 print(f"  Iterations  = {len(model_B.rms_error_history)}")
 
 # ── Step 3: Pole analysis ─────────────────────────────────────────────────────
@@ -257,7 +259,7 @@ _section("Pole characterisation")
 print_pole_table(model_B)
 print()
 print("  True Butterworth poles (4th order, f_c=500 MHz):")
-print("  All have |p|=2π·500 MHz, angles ±π·(2k+3)/8, k=0,1")
+print("  All have |p|=2*pi*500 MHz, angles +/-pi*(2k+3)/8, k=0,1")
 
 # ── Step 4: Foster synthesis ──────────────────────────────────────────────────
 _section("Foster RLC synthesis")
@@ -474,7 +476,188 @@ fig2.tight_layout()
 fig2.savefig(HERE / "04_filter_pipeline.png", dpi=150)
 print("Saved: 04_filter_pipeline.png")
 
-plt.show()
+plt.close("all")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dataset C — Multi-peak impedance  (5 resonances: 30/60/200/500/700 kHz)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_header("Dataset C - Multi-Peak Impedance  (Re/Im CSV, kHz)")
+
+# ── Step 1: Load ──────────────────────────────────────────────────────────────
+# Generated by examples/07_multi_peak.py from five parallel RLC branches.
+# True peaks: 30 kHz (Q=8), 60 kHz (Q=10), 200 kHz (Q=15),
+#             500 kHz (Q=12), 700 kHz (Q=7)
+data_C = load_ri_csv(
+    HERE / "data_multi_peak_Z.csv",
+    freq_col  = "Frequency[kHz]",
+    re_col    = "Re[Z_Ohm]",
+    im_col    = "Im[Z_Ohm]",
+    freq_unit = "kHz",
+    label     = "Multi-Peak Z(jw)",
+)
+print(data_C.summary())
+
+# ── Step 2: Fit ───────────────────────────────────────────────────────────────
+_section("Vector Fitting")
+
+# 5 resonances → 5 conjugate pairs → n_poles = 10 (exact model order).
+# weight='inverse': peaks span a wide dynamic range; inverse weighting
+# prevents low-impedance troughs from dominating the LS cost.
+model_C = VectorFitter(
+    n_poles    = 10,
+    n_iter_max = 150,
+    weight     = "inverse",
+).fit(data_C.freq_hz, data_C.H)
+
+H_C_fit  = model_C.evaluate(data_C.freq_hz)
+rms_rel_C = float(np.sqrt(np.mean(
+    np.abs((H_C_fit - data_C.H) / data_C.H) ** 2
+)))
+print(f"  n_poles     = {model_C.n_poles}")
+print(f"  RMS (abs)   = {model_C.rms_error:.4e} Ohm")
+print(f"  RMS (rel)   = {rms_rel_C:.4e}  ({rms_rel_C*100:.5f} %)")
+print(f"  Iterations  = {len(model_C.rms_error_history)}")
+
+# ── Step 3: Pole analysis ─────────────────────────────────────────────────────
+_section("Pole characterisation")
+print_pole_table(model_C)
+
+# Compare fitted resonances to known true values
+TRUE_PEAKS = [
+    (30e3,   8),
+    (60e3,  10),
+    (200e3, 15),
+    (500e3, 12),
+    (700e3,  7),
+]
+from vfit.core.pole_zero import pole_resonant_frequency, pole_quality_factor
+
+upper_C = sorted(
+    [(pole_resonant_frequency(p), pole_quality_factor(p))
+     for p in model_C.poles if p.imag > 0],
+    key=lambda t: t[0],
+)
+
+print()
+print(f"  {'#':>3}  {'f0_fit (kHz)':>13}  {'f0_true (kHz)':>14}  "
+      f"{'Q_fit':>8}  {'Q_true':>7}  {'df/f (%)':>10}")
+for k, (f0_true, Q_true) in enumerate(TRUE_PEAKS):
+    # match to the nearest fitted pole in frequency
+    best = min(upper_C, key=lambda t: abs(t[0] - f0_true))
+    f0_fit, Q_fit = best
+    delta_f = abs(f0_fit - f0_true) / f0_true * 100
+    print(f"  {k+1:>3}  {f0_fit/1e3:>13.3f}  {f0_true/1e3:>14.3f}  "
+          f"{Q_fit:>8.3f}  {Q_true:>7}  {delta_f:>10.4f}")
+
+# ── Step 4: Foster RLC synthesis ──────────────────────────────────────────────
+_section("Foster RLC synthesis")
+network_C = foster_synthesis(model_C)
+print_rlc_table(network_C)
+
+Z_synth_C  = network_C.impedance(data_C.freq_hz)
+rms_synth_C = float(np.sqrt(np.mean(
+    np.abs((Z_synth_C - model_C.evaluate(data_C.freq_hz))
+           / (np.abs(model_C.evaluate(data_C.freq_hz)) + 1e-30)) ** 2
+)))
+print(f"\n  Synthesis round-trip RMS = {rms_synth_C:.4e}  (model vs network)")
+
+# ── Step 5: SPICE export ──────────────────────────────────────────────────────
+_section("SPICE export")
+mp_foster_path    = HERE / "multi_peak_from_csv_foster.cir"
+mp_beh_path       = HERE / "multi_peak_from_csv_behavioral.cir"
+tb_mp_foster_path = HERE / "tb_multi_peak_from_csv_foster.cir"
+tb_mp_beh_path    = HERE / "tb_multi_peak_from_csv_behavioral.cir"
+
+export_spice_foster(         network_C, mp_foster_path,    subckt_name="MP_FOSTER")
+export_spice_behavioral(     model_C,   mp_beh_path,       subckt_name="MP_LAPLACE")
+export_spice_test_foster(    network_C, tb_mp_foster_path, subckt_name="MP_FOSTER",
+                             subckt_file=mp_foster_path,
+                             freq_start_hz=data_C.freq_hz.min(),
+                             freq_stop_hz=data_C.freq_hz.max())
+export_spice_test_behavioral(model_C,   tb_mp_beh_path,    subckt_name="MP_LAPLACE",
+                             subckt_file=mp_beh_path,
+                             freq_start_hz=data_C.freq_hz.min(),
+                             freq_stop_hz=data_C.freq_hz.max())
+
+# ── Figure 3: Dataset C — multi-peak pipeline ──────────────────────────────────
+fig3, axes3 = plt.subplots(2, 2, figsize=(13, 9))
+fig3.suptitle(
+    "Dataset C — Multi-Peak Impedance loaded from CSV\n"
+    "5 resonances at 30 / 60 / 200 / 500 / 700 kHz  "
+    f"|  n_poles={model_C.n_poles}  |  rel-RMS={rms_rel_C:.2e}",
+    fontsize=11, fontweight="bold",
+)
+ax_mag_C, ax_phase_C, ax_err_C, ax_conv_C = axes3.flat
+
+f_khz_C    = data_C.freq_hz / 1e3
+peak_f_khz = [30, 60, 200, 500, 700]
+
+# Magnitude
+ax_mag_C.semilogx(f_khz_C, 20*np.log10(np.abs(data_C.H) + 1e-300),
+                  color=_C_MEAS, lw=2.0, label="CSV data")
+ax_mag_C.semilogx(f_khz_C, 20*np.log10(np.abs(H_C_fit) + 1e-300),
+                  color=_C_FIT, lw=1.8, ls="--",
+                  label=f"VF fit (n={model_C.n_poles})")
+ax_mag_C.semilogx(f_khz_C, 20*np.log10(np.abs(Z_synth_C) + 1e-300),
+                  color=_C_SYNTH, lw=1.5, ls=":",
+                  label="Foster synthesis")
+for fk in peak_f_khz:
+    ax_mag_C.axvline(fk, color="gray", lw=0.7, ls="--", alpha=0.5)
+ax_mag_C.set_xlabel("Frequency (kHz)", fontsize=9)
+ax_mag_C.set_ylabel("|Z| (dB Ohm)", fontsize=9)
+ax_mag_C.set_title("Bode — Magnitude", fontsize=9)
+ax_mag_C.legend(fontsize=7.5)
+ax_mag_C.grid(True, which="both", color="#cccccc", lw=0.5)
+ax_mag_C.spines[["top", "right"]].set_visible(False)
+
+# Phase
+ax_phase_C.semilogx(f_khz_C, np.degrees(np.angle(data_C.H)),
+                    color=_C_MEAS, lw=2.0)
+ax_phase_C.semilogx(f_khz_C, np.degrees(np.angle(H_C_fit)),
+                    color=_C_FIT, lw=1.8, ls="--")
+ax_phase_C.semilogx(f_khz_C, np.degrees(np.angle(Z_synth_C)),
+                    color=_C_SYNTH, lw=1.5, ls=":")
+for fk in peak_f_khz:
+    ax_phase_C.axvline(fk, color="gray", lw=0.7, ls="--", alpha=0.5)
+ax_phase_C.set_xlabel("Frequency (kHz)", fontsize=9)
+ax_phase_C.set_ylabel("Phase (deg)", fontsize=9)
+ax_phase_C.set_title("Bode — Phase", fontsize=9)
+ax_phase_C.grid(True, which="both", color="#cccccc", lw=0.5)
+ax_phase_C.spines[["top", "right"]].set_visible(False)
+
+# Relative error
+err_fit_C   = np.abs((H_C_fit   - data_C.H) / data_C.H) * 100
+err_synth_C = np.abs((Z_synth_C - data_C.H) / data_C.H) * 100
+ax_err_C.semilogx(f_khz_C, err_fit_C,   color=_C_FIT,   lw=1.5, label="VF fit")
+ax_err_C.semilogx(f_khz_C, err_synth_C, color=_C_SYNTH, lw=1.5, ls=":", label="Synthesis")
+ax_err_C.axhline(0.1, color="gray", lw=1.0, ls="--", label="0.1 % threshold")
+ax_err_C.set_xlabel("Frequency (kHz)", fontsize=9)
+ax_err_C.set_ylabel("Relative error (%)", fontsize=9)
+ax_err_C.set_title("Point-wise relative error", fontsize=9)
+ax_err_C.legend(fontsize=7.5)
+ax_err_C.grid(True, which="both", color="#cccccc", lw=0.5)
+ax_err_C.spines[["top", "right"]].set_visible(False)
+
+# Convergence
+hist_C = model_C.rms_error_history
+ax_conv_C.semilogy(range(1, len(hist_C)+1), hist_C, "o-",
+                   color=_C_MEAS, lw=2, ms=4)
+ax_conv_C.axhline(hist_C[-1], color=_C_FIT, ls="--", lw=1,
+                  label=f"Final={hist_C[-1]:.2e}")
+ax_conv_C.set_xlabel("Iteration", fontsize=9)
+ax_conv_C.set_ylabel("RMS Error (Ohm)", fontsize=9)
+ax_conv_C.set_title("Convergence", fontsize=9)
+ax_conv_C.legend(fontsize=8)
+ax_conv_C.grid(True, which="both", color="#cccccc", lw=0.5)
+ax_conv_C.spines[["top", "right"]].set_visible(False)
+
+fig3.tight_layout()
+fig3.savefig(HERE / "04_multi_peak_pipeline.png", dpi=150)
+plt.close(fig3)
+print("\nSaved: 04_multi_peak_pipeline.png")
+
 print("\nDone.")
 print()
 print("SPICE files written:")
@@ -482,3 +665,5 @@ print(f"  {HERE / 'inductor_foster.cir'}")
 print(f"  {HERE / 'inductor_behavioral.cir'}")
 print(f"  {HERE / 'filter_foster.cir'}")
 print(f"  {HERE / 'filter_behavioral.cir'}")
+print(f"  {mp_foster_path}")
+print(f"  {mp_beh_path}")

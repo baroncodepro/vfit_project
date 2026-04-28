@@ -88,6 +88,13 @@ s     = 1j * omega
 # ── Analytical impedance ───────────────────────────────────────────────────────
 Z_meas = sum(parallel_rlc_z(s, f0, Q, R) for f0, Q, R in PEAKS)
 
+# ── Save CSV for use by example 04 ────────────────────────────────────────────
+csv_path = HERE / "data_multi_peak_Z.csv"
+csv_data = np.column_stack([freq / 1e3, Z_meas.real, Z_meas.imag])
+header   = "Frequency[kHz],Re[Z_Ohm],Im[Z_Ohm]"
+np.savetxt(csv_path, csv_data, delimiter=",", header=header, comments="", fmt="%.6f")
+print(f"CSV saved: {csv_path.name}  ({len(freq)} rows)")
+
 # ── Print true branch parameters ──────────────────────────────────────────────
 print("=" * 72)
 print("Example 07 — Five-Resonance Impedance (Multi-Peak)")
