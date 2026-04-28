@@ -160,9 +160,11 @@ tb_beh     = HERE / "tb_multi_peak_behavioral.cir"
 export_spice_foster(network, foster_cir,  subckt_name="MULTI_PEAK_FOSTER")
 export_spice_behavioral(model, beh_cir,   subckt_name="MULTI_PEAK_LAPLACE")
 export_spice_test_foster(network, tb_foster,
-                         subckt_name="MULTI_PEAK_FOSTER",  subckt_file=foster_cir)
+                         subckt_name="MULTI_PEAK_FOSTER",  subckt_file=foster_cir,
+                         freq_start_hz=freq.min(), freq_stop_hz=freq.max())
 export_spice_test_behavioral(model, tb_beh,
-                             subckt_name="MULTI_PEAK_LAPLACE", subckt_file=beh_cir)
+                             subckt_name="MULTI_PEAK_LAPLACE", subckt_file=beh_cir,
+                             freq_start_hz=freq.min(), freq_stop_hz=freq.max())
 print(f"\nSPICE exports: {foster_cir.name}, {beh_cir.name}, "
       f"{tb_foster.name}, {tb_beh.name}")
 
